@@ -184,9 +184,9 @@ opts_AddMandatory '--path' 'StudyFolder' 'path' "Path to study data folder (requ
 
 opts_AddMandatory '--subject' 'Subject' 'subject' "Subject ID (required)  Used with --path input to create full path to root  directory for all outputs generated as path/subject"
 
-opts_AddMandatory '--t1' 'T1' 'T1wInputImages' "An @ symbol separated list of full paths to T1-weighted  (T1w) structural images for the subject (required)"
+opts_AddMandatory '--t1' 'T1wInputImages' "T1" "An @ symbol separated list of full paths to T1-weighted  (T1w) structural images for the subject (required)"
 
-opts_AddMandatory '--t2' 'T2' 'T2wInputImages' "An @ symbol separated list of full paths to T2-weighted  (T2w) structural images for the subject (required for   hcp-style data, can be NONE for legacy-style data,   see --processing-mode option)"
+opts_AddMandatory '--t2' 'T2wInputImages' "T2" "An @ symbol separated list of full paths to T2-weighted  (T2w) structural images for the subject (required for   hcp-style data, can be NONE for legacy-style data,   see --processing-mode option)"
 
 opts_AddMandatory '--t1template' 'T1wTemplate' 'file_path' "MNI T1w template"
 
@@ -389,7 +389,7 @@ if [ ! -e ${AtlasSpaceFolder}/xfms ] ; then
   mkdir -p ${AtlasSpaceFolder}/xfms/
 fi
 
-log_Msg "POSIXLY_CORRECT="${POSIXLY_CORRECT}
+# log_Msg "POSIXLY_CORRECT="${POSIXLY_CORRECT} #NOT DEFINED ANYWHERE ELSE DO WE NEED THIS? 
 
 # ------------------------------------------------------------------------------
 #  Do primary work
