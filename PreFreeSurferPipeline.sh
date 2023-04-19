@@ -208,17 +208,17 @@ opts_AddMandatory '--brainsize' 'BrainSize' 'size_value' "Brain size estimate in
 
 opts_AddMandatory '--fnirtconfig' 'FNIRTConfig' 'file_path' "FNIRT 2mm T1w Configuration file"
 
-opts_AddMandatory '--fmapmag' 'MagnitudeInputName' 'file_path' "Siemens/Philips Gradient Echo Fieldmap magnitude file"
+opts_AddOptional '--fmapmag' 'MagnitudeInputName' 'file_path' "Siemens/Philips Gradient Echo Fieldmap magnitude file"
 
-opts_AddMandatory '--fmapphase' 'PhaseInputName' 'file_path' "Siemens/Philips Gradient Echo Fieldmap phase file"
+opts_AddOptional '--fmapphase' 'PhaseInputName' 'file_path' "Siemens/Philips Gradient Echo Fieldmap phase file"
 
-opts_AddMandatory '--fmapgeneralelectric' 'GEB0InputName' 'file_path' "General Electric Gradient Echo Field Map file  Two volumes in one file  1. field map in deg  2. magnitude"
+opts_AddOptional '--fmapgeneralelectric' 'GEB0InputName' 'file_path' "General Electric Gradient Echo Field Map file  Two volumes in one file  1. field map in deg  2. magnitude"
 
-opts_AddMandatory '--echodiff' 'TE' 'delta_TE' "Delta TE in ms for field map or 'NONE' if  not used"
+opts_AddOptional '--echodiff' 'TE' 'delta_TE' "Delta TE in ms for field map or 'NONE' if  not used"
 
-opts_AddMandatory '--SEPhaseNeg' 'SpinEchoPhaseEncodeNegative' '<file_path>_or__NONE' "For spin echo field map, path to volume with  a negative phase encoding direction (LR in  HCP data), set to 'NONE' if not using Spin  Echo Field Maps"
+opts_AddOptional '--SEPhaseNeg' 'SpinEchoPhaseEncodeNegative' '<file_path>_or__NONE' "For spin echo field map, path to volume with  a negative phase encoding direction (LR in  HCP data), set to 'NONE' if not using Spin  Echo Field Maps"
 
-opts_AddMandatory '--SEPhasePos' 'SpinEchoPhaseEncodePositive' '<file_path>_or__NONE' "For spin echo field map, path to volume with  a positive phase encoding direction (RL in  HCP data), set to 'NONE' if not using Spin  Echo Field Maps" 
+opts_AddOptional '--SEPhasePos' 'SpinEchoPhaseEncodePositive' '<file_path>_or__NONE' "For spin echo field map, path to volume with  a positive phase encoding direction (RL in  HCP data), set to 'NONE' if not using Spin  Echo Field Maps" 
 
 opts_AddMandatory '--seechospacing' 'SEEchoSpacing' 'seconds' "Effective Echo Spacing of Spin Echo Field Map,  (in seconds) or 'NONE' if not used"
 
@@ -256,7 +256,7 @@ opts_AddMandatory '--avgrdcmethod' 'AvgrdcSTRING' 'avgrdcmethod' "Averaging and 
       equivalent to '${SIEMENS_METHOD_OPT}' (preferred)
       This option value is maintained for backward compatibility."
 
-opts_AddMandatory '--topupconfig' 'TopupConfig' 'file_path' "Configuration file for topup or 'NONE' if not used"
+opts_AddOptional '--topupconfig' 'TopupConfig' 'file_path' "Configuration file for topup or 'NONE' if not used"
 
 opts_AddOptional '--bfsigma' 'BiasFieldSmoothingSigma' 'value' "Bias Field Smoothing Sigma (optional)"
 
