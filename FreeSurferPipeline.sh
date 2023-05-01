@@ -43,13 +43,11 @@
 set -eu
 
 pipedirguessed=0
-
 if [[ "${HCPPIPEDIR:-}" == "" ]]
 then
     pipedirguessed=1
     #fix this if the script is more than one level below HCPPIPEDIR
-    export HCPPIPEDIR="$(dirname -- "$0
-	")/.."
+    export HCPPIPEDIR="$(dirname -- "$0")/.."
 fi
 
 source "${HCPPIPEDIR}/global/scripts/debug.shlib" "$@"         # Debugging functions; also sources log.shlib
@@ -62,7 +60,7 @@ opts_SetScriptDescription "Runs the FreeSurfer HCP pipline on data processed by 
 # Show usage information
 opts_AddMandatory '--subject' 'Subject' 'subject' "Subject ID (required)  Used with --path input to create full path to root  directory for all outputs generated as path/subject"
 
-opts_AddOptional  '--subjectDIR' 'SubjectDIR' 'subject' 'path to subject directory required, unless --existing-subject is set' "" "--subject-dir"
+opts_AddOptional  '--subjectDIR' 'SubjectDIR' 'subject' 'path to subject directory required, unless --existing-subject is set' " " "--subject-dir"
 	 
 opts_AddOptional '--t1' 'T1wImage' "T1" 'path to T1w image required, unless --existing-subject is set' " " "--t1w-image"
 
@@ -81,7 +79,7 @@ opts_AddOptional '--extra-reconall-arg' 'extra_reconall_args' 'token' "(repeatab
 
 opts_AddOptional '--no-conf2hires' 'conf2hires' 'noConf2hires' " Indicates that the script should NOT include -conf2hires as an argument to recon-all.  By default, -conf2hires *IS* included, so that recon-all will place the surfaces on the   hires T1 (and T2).  This is an advanced option, intended for situations where:  (i) the original T1w and T2w images are NOT 'hires' (i.e., they are 1 mm isotropic or worse), or  (ii) you want to be able to run some flag in recon-all, without also regenerating the surfaces.  e.g., --existing-subject --extra-reconall-arg=-show-edits --no-conf2hires" "TRUE"
   
-opts_AddOptional '--processing-mode' 'ProcessingMode' 'HCPStyleData or LegacyStyleData' " Controls whether the HCP acquisition and processing guidelines should be treated as requirements.  'HCPStyleData' (the default) follows the processing steps described in Glasser et al. (2013)   and requires 'HCP-Style' data acquistion.   'LegacyStyleData' allows additional processing functionality and use of some acquisitions  that do not conform to 'HCP-Style' expectations.  In this script, it allows not having a high-resolution T2w image."
+opts_AddOptional '--processing-mode' 'ProcessingMode' 'HCPStyleData or LegacyStyleData' " Controls whether the HCP acquisition and processing guidelines should be treated as requirements.  'HCPStyleData' (the default) follows the processing steps described in Glasser et al. (2013)   and requires 'HCP-Style' data acquistion.   'LegacyStyleData' allows additional processing functionality and use of some acquisitions  that do not conform to 'HCP-Style' expectations.  In this script, it allows not having a high-resolution T2w image." "HCPStyleData"
 
 opts_ParseArguments "$@"
 
@@ -94,6 +92,8 @@ fi
 opts_ShowValues
 
 #check if existing_subject is set, if not t1 has to be set, and if t2 is not set, set processing mode flag to legacy 
+Compliance="HCPStyleData"
+ComplianceMsg=""
 
 if [ "${T2wImage}" = "NONE" ] || [ "${T2wImage}" = "" ]
 then
@@ -107,9 +107,13 @@ then
 fi
 
 if [ "${T1wImage}" = "NONE" ] || [ "${T1wImage}" = "" ]
-    log_Err_Abort "t1 not set"
+then
+	if ["${existing_subject}"  = "NONE" ] || [ "${existing_subject}" = "" ]
+	then
+		log_Err_Abort "t1 not set and '--existing-subject' not used"
+	fi 
+fi
 
-# log_Err_Abort for if t1 not set 
 check_mode_compliance "${ProcessingMode}" "${Compliance}" "${ComplianceMsg}"
 
 
@@ -134,9 +138,9 @@ configure_custom_tools()
 	local which_conf2hires
 	local which_longmc
 
-	which_recon_all=$(which recon-all.v6.hires)
-	which_conf2hires=$(which conf2hires)
-	which_longmc=$(which longmc)
+	which_recon_all=$(which recon-all.v6.hires || true)
+	which_conf2hires=$(which conf2hires || true)
+	which_longmc=$(which longmc || true)
 
 	if [[ "${which_recon_all}" = "" || "${which_conf2hires}" == "" || "${which_longmc}" = "" ]] ; then
 		export PATH="${HCPPIPEDIR}/FreeSurfer/custom:${PATH}"
@@ -163,7 +167,7 @@ show_tool_versions()
 
 	# Show recon-all version
 	log_Msg "Showing recon-all.v6.hires version"
-	local which_recon_all=$(which recon-all.v6.hires)
+	local which_recon_all=$(which recon-all.v6.hires || true)
 	log_Msg ${which_recon_all}
 	recon-all.v6.hires -version
 	
@@ -214,10 +218,8 @@ validate_freesurfer_version()
 	# version X.Y.Z ==> X primary, Y secondary, Z tertiary
 	freesurfer_version_array=(${freesurfer_version//./ })
 
-	freesurfer_primary_version="${freesurfer_version_array[0
-	]}"
-	freesurfer_primary_version=${freesurfer_primary_version//[!0
-	-9]/}
+	freesurfer_primary_version="${freesurfer_version_array[0]}"
+	freesurfer_primary_version=${freesurfer_primary_version//[!0-9]/}
 
 	freesurfer_secondary_version="${freesurfer_version_array[1]}"
 	freesurfer_secondary_version=${freesurfer_secondary_version//[!0-9]/}
@@ -381,307 +383,309 @@ make_t1wxt2w_qc_file()
 	popd
 }
 
+main()
+{
+	local SubjectDIR
+	local SubjectID
+	local T1wImage
+	local T1wImageBrain
+	local T2wImage
+	local recon_all_seed
+	local flair="FALSE"
+	local existing_subject="FALSE"
+	local extra_reconall_args
+	local conf2hires="TRUE"
 
-# local SubjectDIR
-# local SubjectID
-# local T1wImage
-# local T1wImageBrain
-# local T2wImage
-# local recon_all_seed
-# local flair="FALSE"
-# local existing_subject="FALSE"
-# local extra_reconall_args
-# local conf2hires="TRUE"
+	local zero_threshold_T1wImage
+	local return_code
+	local recon_all_cmd
+	local mridir
+	local transformsdir
+	local eye_dat_file
 
-local zero_threshold_T1wImage
-local return_code
-local recon_all_cmd
-local mridir
-local transformsdir
-local eye_dat_file
+	local tkregister_cmd
+	local mri_concatenate_lta_cmd
+	local mri_surf2surf_cmd
+	local t2_or_flair
 
-local tkregister_cmd
-local mri_concatenate_lta_cmd
-local mri_surf2surf_cmd
-local t2_or_flair
-
-local T2wtoT1wFile="T2wtoT1w.mat"      # Calling this file T2wtoT1w.mat regardless of whether the input to recon-all was -T2 or -FLAIR
-local OutputOrigT1wToT1w="OrigT1w2T1w" # Needs to match name used in PostFreeSurfer (N.B. "OrigT1" here refers to the T1w/T1w.nii.gz file; NOT FreeSurfer's "orig" space)
-
-# ----------------------------------------------------------------------
-log_Msg "Starting main functionality"
-# ----------------------------------------------------------------------
-
-# ----------------------------------------------------------------------
-log_Msg "Retrieve positional parameters"
-# ----------------------------------------------------------------------
-SubjectDIR="${1}"
-SubjectID="${2}"
-T1wImage="${3}"       # Irrelevant if '--existing-subject' flag is set
-T1wImageBrain="${4}"  # Irrelevant if '--existing-subject' flag is set
-T2wImage="${5}"       # Irrelevant if '--existing-subject' flag is set
-recon_all_seed="${6}"
-
-## MPH: Hack!
-# For backwards compatibility, continue to allow positional specification of parameters for the above set of 6 parameters.
-# But any new parameters/options in the script will only be accessible via a named parameter/flag.
-# Here, we retrieve those from the global variable that was set in get_options()
-if [ "${p_flair}" = "TRUE" ]; then
-	flair=${p_flair}
-fi
-if [ "${p_existing_subject}" = "TRUE" ]; then
-	existing_subject=${p_existing_subject}
-fi
-if [ ! -z "${p_extra_reconall_args}" ]; then
-	extra_reconall_args="${p_extra_reconall_args}"
-fi
-if [ ! -z "${p_conf2hires}" ]; then
-	conf2hires=${p_conf2hires}
-fi
-
-# ----------------------------------------------------------------------
-# Log values retrieved from positional parameters
-# ----------------------------------------------------------------------
-log_Msg "SubjectDIR: ${SubjectDIR}"
-log_Msg "SubjectID: ${SubjectID}"
-log_Msg "T1wImage: ${T1wImage}"
-log_Msg "T1wImageBrain: ${T1wImageBrain}"
-log_Msg "T2wImage: ${T2wImage}"
-log_Msg "recon_all_seed: ${recon_all_seed}"
-log_Msg "flair: ${flair}"
-log_Msg "existing_subject: ${existing_subject}"
-log_Msg "extra_reconall_args: ${extra_reconall_args}"
-log_Msg "conf2hires: ${conf2hires}"
-
-
-if [ "${existing_subject}" != "TRUE" ]; then
-
-	# If --existing-subject is NOT set, AND PostFreeSurfer has been run, then
-	# certain files need to be reverted to their PreFreeSurfer output versions
-	if [ `imtest ${SubjectDIR}/xfms/${OutputOrigT1wToT1w}` = 1 ]; then
-		log_Err "The --existing-subject flag was not invoked AND PostFreeSurfer has already been run."
-		log_Err "If attempting to run FreeSurfer de novo, certain files (e.g., <subj>/T1w/{T1w,T2w}_acpc_dc*) need to be reverted to their PreFreeSurfer outputs."
-		log_Err_Abort "If this is the goal, delete ${SubjectDIR}/${SubjectID} AND re-run PreFreeSurfer, before invoking FreeSurfer again."
-	fi
+	local T2wtoT1wFile="T2wtoT1w.mat"      # Calling this file T2wtoT1w.mat regardless of whether the input to recon-all was -T2 or -FLAIR
+	local OutputOrigT1wToT1w="OrigT1w2T1w" # Needs to match name used in PostFreeSurfer (N.B. "OrigT1" here refers to the T1w/T1w.nii.gz file; NOT FreeSurfer's "orig" space)
 
 	# ----------------------------------------------------------------------
-	log_Msg "Thresholding T1w image to eliminate negative voxel values"
+	log_Msg "Starting main functionality"
 	# ----------------------------------------------------------------------
-	zero_threshold_T1wImage=$(remove_ext ${T1wImage})_zero_threshold.nii.gz
-	log_Msg "...This produces a new file named: ${zero_threshold_T1wImage}"
 
-	fslmaths ${T1wImage} -thr 0 ${zero_threshold_T1wImage}
-	return_code=$?
-	if [ "${return_code}" != "0" ]; then
-		log_Err_Abort "fslmaths command failed with return_code: ${return_code}"
-	fi
-fi
+	# ----------------------------------------------------------------------
+	log_Msg "Retrieve positional parameters"
+	# ----------------------------------------------------------------------
+	SubjectDIR="${1}"
+	SubjectID="${2}"
+	T1wImage="${3}"       # Irrelevant if '--existing-subject' flag is set
+	T1wImageBrain="${4}"  # Irrelevant if '--existing-subject' flag is set
+	T2wImage="${5}"       # Irrelevant if '--existing-subject' flag is set
+	recon_all_seed="${6}"
 
-# ----------------------------------------------------------------------
-log_Msg "Call custom recon-all: recon-all.v6.hires"
-# ----------------------------------------------------------------------
+	## MPH: Hack!
+	# For backwards compatibility, continue to allow positional specification of parameters for the above set of 6 parameters.
+	# But any new parameters/options in the script will only be accessible via a named parameter/flag.
+	# Here, we retrieve those from the global variable that was set in get_options()
+	# if [ "${p_flair}" = "TRUE" ]; then
+	# 	flair=${p_flair}
+	# fi
+	# if [ "${p_existing_subject}" = "TRUE" ]; then
+	# 	existing_subject=${p_existing_subject}
+	# fi
+	# if [ ! -z "${p_extra_reconall_args}" ]; then
+	# 	extra_reconall_args="${p_extra_reconall_args}"
+	# fi
+	# if [ ! -z "${p_conf2hires}" ]; then
+	# 	conf2hires=${p_conf2hires}
+	# fi
 
-recon_all_cmd="recon-all.v6.hires"
-recon_all_cmd+=" -subjid ${SubjectID}"
-recon_all_cmd+=" -sd ${SubjectDIR}"
-if [ "${existing_subject}" != "TRUE" ]; then  # input volumes only necessary first time through
-	recon_all_cmd+=" -all"
-	recon_all_cmd+=" -i ${zero_threshold_T1wImage}"
-	recon_all_cmd+=" -emregmask ${T1wImageBrain}"
-	if [ "${T2wImage}" != "NONE" ]; then
-		if [ "${flair}" = "TRUE" ]; then
-			recon_all_cmd+=" -FLAIR ${T2wImage}"
-		else
-			recon_all_cmd+=" -T2 ${T2wImage}"
+	# ----------------------------------------------------------------------
+	# Log values retrieved from positional parameters
+	# ----------------------------------------------------------------------
+	log_Msg "SubjectDIR: ${SubjectDIR}"
+	log_Msg "SubjectID: ${SubjectID}"
+	log_Msg "T1wImage: ${T1wImage}"
+	log_Msg "T1wImageBrain: ${T1wImageBrain}"
+	log_Msg "T2wImage: ${T2wImage}"
+	log_Msg "recon_all_seed: ${recon_all_seed}"
+	log_Msg "flair: ${flair}"
+	log_Msg "existing_subject: ${existing_subject}"
+	log_Msg "extra_reconall_args: ${extra_reconall_args}"
+	log_Msg "conf2hires: ${conf2hires}"
+
+
+	if [ "${existing_subject}" != "TRUE" ]; then
+
+		# If --existing-subject is NOT set, AND PostFreeSurfer has been run, then
+		# certain files need to be reverted to their PreFreeSurfer output versions
+		if [ `imtest ${SubjectDIR}/xfms/${OutputOrigT1wToT1w}` = 1 ]; then
+			log_Err "The --existing-subject flag was not invoked AND PostFreeSurfer has already been run."
+			log_Err "If attempting to run FreeSurfer de novo, certain files (e.g., <subj>/T1w/{T1w,T2w}_acpc_dc*) need to be reverted to their PreFreeSurfer outputs."
+			log_Err_Abort "If this is the goal, delete ${SubjectDIR}/${SubjectID} AND re-run PreFreeSurfer, before invoking FreeSurfer again."
+		fi
+
+		# ----------------------------------------------------------------------
+		log_Msg "Thresholding T1w image to eliminate negative voxel values"
+		# ----------------------------------------------------------------------
+		zero_threshold_T1wImage=$(remove_ext ${T1wImage})_zero_threshold.nii.gz
+		log_Msg "...This produces a new file named: ${zero_threshold_T1wImage}"
+
+		fslmaths ${T1wImage} -thr 0 ${zero_threshold_T1wImage}
+		return_code=$?
+		if [ "${return_code}" != "0" ]; then
+			log_Err_Abort "fslmaths command failed with return_code: ${return_code}"
 		fi
 	fi
-fi
 
-# By default, refine pial surfaces using T2 (if T2w image provided).
-# If for some other reason the -T2pial flag needs to be excluded from recon-all, 
-# this can be accomplished using --extra-reconall-arg=-noT2pial
-if [ "${T2wImage}" != "NONE" ]; then
-	if [ "${flair}" = "TRUE" ]; then
-		recon_all_cmd+=" -FLAIRpial"
-	else
-		recon_all_cmd+=" -T2pial"
+	# ----------------------------------------------------------------------
+	log_Msg "Call custom recon-all: recon-all.v6.hires"
+	# ----------------------------------------------------------------------
+
+	recon_all_cmd="recon-all.v6.hires"
+	recon_all_cmd+=" -subjid ${SubjectID}"
+	recon_all_cmd+=" -sd ${SubjectDIR}"
+	if [ "${existing_subject}" != "TRUE" ]; then  # input volumes only necessary first time through
+		recon_all_cmd+=" -all"
+		recon_all_cmd+=" -i ${zero_threshold_T1wImage}"
+		recon_all_cmd+=" -emregmask ${T1wImageBrain}"
+		if [ "${T2wImage}" != "NONE" ]; then
+			if [ "${flair}" = "TRUE" ]; then
+				recon_all_cmd+=" -FLAIR ${T2wImage}"
+			else
+				recon_all_cmd+=" -T2 ${T2wImage}"
+			fi
+		fi
 	fi
-fi
 
-if [ ! -z "${recon_all_seed}" ]; then
-	recon_all_cmd+=" -norandomness -rng-seed ${recon_all_seed}"
-fi
+	# By default, refine pial surfaces using T2 (if T2w image provided).
+	# If for some other reason the -T2pial flag needs to be excluded from recon-all, 
+	# this can be accomplished using --extra-reconall-arg=-noT2pial
+	if [ "${T2wImage}" != "NONE" ]; then
+		if [ "${flair}" = "TRUE" ]; then
+			recon_all_cmd+=" -FLAIRpial"
+		else
+			recon_all_cmd+=" -T2pial"
+		fi
+	fi
 
-if [ ! -z "${extra_reconall_args}" ]; then
-	recon_all_cmd+=" ${extra_reconall_args}"
-fi
+	if [ ! -z "${recon_all_seed}" ]; then
+		recon_all_cmd+=" -norandomness -rng-seed ${recon_all_seed}"
+	fi
 
-# The -conf2hires flag should come after the ${extra_reconall_args} string, since it needs
-# to have the "final say" over a couple settings within recon-all
-if [ "${conf2hires}" = "TRUE" ]; then
-	recon_all_cmd+=" -conf2hires"
-fi
+	if [ ! -z "${extra_reconall_args}" ]; then
+		recon_all_cmd+=" ${extra_reconall_args}"
+	fi
 
-log_Msg "...recon_all_cmd: ${recon_all_cmd}"
-${recon_all_cmd}
-return_code=$?
-if [ "${return_code}" != "0" ]; then
-	log_Err_Abort "recon-all command failed with return_code: ${return_code}"
-fi
-
-if [ "${existing_subject}" != "TRUE" ]; then
-	# ----------------------------------------------------------------------
-	log_Msg "Clean up file: ${zero_threshold_T1wImage}"
-	# ----------------------------------------------------------------------
-	rm ${zero_threshold_T1wImage}
+	# The -conf2hires flag should come after the ${extra_reconall_args} string, since it needs
+	# to have the "final say" over a couple settings within recon-all
+	if [ "${conf2hires}" = "TRUE" ]; then
+		recon_all_cmd+=" -conf2hires"
+	fi
+	
+	log_Msg "...recon_all_cmd: ${recon_all_cmd}"
+	${recon_all_cmd}
 	return_code=$?
 	if [ "${return_code}" != "0" ]; then
-		log_Err_Abort "rm ${zero_threshold_T1wImage} failed with return_code: ${return_code}"
+		log_Err_Abort "recon-all command failed with return_code: ${return_code}"
 	fi
 
-fi
+	if [ "${existing_subject}" != "TRUE" ]; then
+		# ----------------------------------------------------------------------
+		log_Msg "Clean up file: ${zero_threshold_T1wImage}"
+		# ----------------------------------------------------------------------
+		rm ${zero_threshold_T1wImage}
+		return_code=$?
+		if [ "${return_code}" != "0" ]; then
+			log_Err_Abort "rm ${zero_threshold_T1wImage} failed with return_code: ${return_code}"
+		fi
 
-## MPH: Portions of the following are unnecesary in the case of ${existing_subject} = "TRUE"
-## but rather than identify what is and isn't strictly necessary (which itself may interact
-## with the specific stages run in recon-all), we'll simply run it all to be safe that all
-## files created following recon-all are appropriately updated
-# ----------------------------------------------------------------------
-log_Msg "Creating eye.dat"
-# ----------------------------------------------------------------------
-mridir=${SubjectDIR}/${SubjectID}/mri
+	fi
 
-transformsdir=${mridir}/transforms
-mkdir -p ${transformsdir}
-
-eye_dat_file=${transformsdir}/eye.dat
-
-log_Msg "...This creates ${eye_dat_file}"
-echo "${SubjectID}" > ${eye_dat_file}
-echo "1" >> ${eye_dat_file}
-echo "1" >> ${eye_dat_file}
-echo "1" >> ${eye_dat_file}
-echo "1 0 0 0" >> ${eye_dat_file}
-echo "0 1 0 0" >> ${eye_dat_file}
-echo "0 0 1 0" >> ${eye_dat_file}
-echo "0 0 0 1" >> ${eye_dat_file}
-echo "round" >> ${eye_dat_file}
-
-if [ "${T2wImage}" != "NONE" ]; then
+	## MPH: Portions of the following are unnecesary in the case of ${existing_subject} = "TRUE"
+	## but rather than identify what is and isn't strictly necessary (which itself may interact
+	## with the specific stages run in recon-all), we'll simply run it all to be safe that all
+	## files created following recon-all are appropriately updated
 	# ----------------------------------------------------------------------
-	log_Msg "Making T2w to T1w registration available in FSL format"
+	log_Msg "Creating eye.dat"
+	# ----------------------------------------------------------------------
+	mridir=${SubjectDIR}/${SubjectID}/mri
+
+	transformsdir=${mridir}/transforms
+	mkdir -p ${transformsdir}
+
+	eye_dat_file=${transformsdir}/eye.dat
+
+	log_Msg "...This creates ${eye_dat_file}"
+	echo "${SubjectID}" > ${eye_dat_file}
+	echo "1" >> ${eye_dat_file}
+	echo "1" >> ${eye_dat_file}
+	echo "1" >> ${eye_dat_file}
+	echo "1 0 0 0" >> ${eye_dat_file}
+	echo "0 1 0 0" >> ${eye_dat_file}
+	echo "0 0 1 0" >> ${eye_dat_file}
+	echo "0 0 0 1" >> ${eye_dat_file}
+	echo "round" >> ${eye_dat_file}
+
+	if [ "${T2wImage}" != "NONE" ]; then
+		# ----------------------------------------------------------------------
+		log_Msg "Making T2w to T1w registration available in FSL format"
+		# ----------------------------------------------------------------------
+
+		pushd ${mridir}
+
+		if [ "${flair}" = "TRUE" ]; then
+			t2_or_flair="FLAIR"
+		else
+			t2_or_flair="T2"
+		fi
+
+		log_Msg "...Create a registration between the original conformed space and the rawavg space"
+		tkregister_cmd="tkregister"
+		tkregister_cmd+=" --mov orig.mgz"
+		tkregister_cmd+=" --targ rawavg.mgz"
+		tkregister_cmd+=" --regheader"
+		tkregister_cmd+=" --noedit"
+		tkregister_cmd+=" --reg deleteme.dat"
+		tkregister_cmd+=" --ltaout transforms/orig-to-rawavg.lta"
+		tkregister_cmd+=" --s ${SubjectID}"
+
+		log_Msg "......The following produces deleteme.dat and transforms/orig-to-rawavg.lta"
+		log_Msg "......tkregister_cmd: ${tkregister_cmd}"
+
+		${tkregister_cmd}
+		return_code=$?
+		if [ "${return_code}" != "0" ]; then
+			log_Err_Abort "tkregister command failed with return_code: ${return_code}"
+		fi
+
+		log_Msg "...Concatenate the ${t2_or_flair}raw->orig and orig->rawavg transforms"
+		mri_concatenate_lta_cmd="mri_concatenate_lta"
+		mri_concatenate_lta_cmd+=" transforms/${t2_or_flair}raw.lta"
+		mri_concatenate_lta_cmd+=" transforms/orig-to-rawavg.lta"
+		mri_concatenate_lta_cmd+=" Q.lta"
+
+		log_Msg "......The following concatenates transforms/${t2_or_flair}raw.lta and transforms/orig-to-rawavg.lta to get Q.lta"
+		log_Msg "......mri_concatenate_lta_cmd: ${mri_concatenate_lta_cmd}"
+		${mri_concatenate_lta_cmd}
+		return_code=$?
+		if [ "${return_code}" != "0" ]; then
+			log_Err_Abort "mri_concatenate_lta command failed with return_code: ${return_code}"
+		fi
+
+		log_Msg "...Convert to FSL format"
+		tkregister_cmd="tkregister"
+		tkregister_cmd+=" --mov orig/${t2_or_flair}raw.mgz"
+		tkregister_cmd+=" --targ rawavg.mgz"
+		tkregister_cmd+=" --reg Q.lta"
+		tkregister_cmd+=" --fslregout transforms/${T2wtoT1wFile}"
+		tkregister_cmd+=" --noedit"
+
+		log_Msg "......The following produces the transforms/${T2wtoT1wFile} file that we need"
+		log_Msg "......tkregister_cmd: ${tkregister_cmd}"
+
+		${tkregister_cmd}
+		return_code=$?
+		if [ "${return_code}" != "0" ]; then
+			log_Err_Abort "tkregister command failed with return_code: ${return_code}"
+		fi
+
+		log_Msg "...Clean up"
+		rm deleteme.dat
+		rm Q.lta
+
+		popd
+	fi
+
+	# ----------------------------------------------------------------------
+	log_Msg "Creating white surface files in rawavg space"
 	# ----------------------------------------------------------------------
 
 	pushd ${mridir}
-
-	if [ "${flair}" = "TRUE" ]; then
-		t2_or_flair="FLAIR"
-	else
-		t2_or_flair="T2"
-	fi
-
-	log_Msg "...Create a registration between the original conformed space and the rawavg space"
-	tkregister_cmd="tkregister"
-	tkregister_cmd+=" --mov orig.mgz"
-	tkregister_cmd+=" --targ rawavg.mgz"
-	tkregister_cmd+=" --regheader"
-	tkregister_cmd+=" --noedit"
-	tkregister_cmd+=" --reg deleteme.dat"
-	tkregister_cmd+=" --ltaout transforms/orig-to-rawavg.lta"
-	tkregister_cmd+=" --s ${SubjectID}"
-
-	log_Msg "......The following produces deleteme.dat and transforms/orig-to-rawavg.lta"
-	log_Msg "......tkregister_cmd: ${tkregister_cmd}"
-
-	${tkregister_cmd}
+	
+	export SUBJECTS_DIR="$SubjectDIR"
+	
+	reg=$mridir/transforms/orig2rawavg.dat
+	# generate registration between conformed and hires based on headers
+	# Note that the convention of tkregister2 is that the resulting $reg is the registration
+	# matrix that maps from the "--targ" space into the "--mov" space. 
+	
+	tkregister2 --mov ${mridir}/rawavg.mgz --targ ${mridir}/orig.mgz --noedit --regheader --reg $reg
+	
+	#The ?h.white.deformed surfaces are used in FreeSurfer BBR registrations for fMRI and diffusion and have been moved into the HCP's T1w space so that BBR produces a transformation containing only the minor adjustment to the registration.  
+	mri_surf2surf --s ${SubjectID} --sval-xyz white --reg $reg --tval-xyz ${mridir}/rawavg.mgz --tval white.deformed --surfreg white --hemi lh
 	return_code=$?
 	if [ "${return_code}" != "0" ]; then
-		log_Err_Abort "tkregister command failed with return_code: ${return_code}"
+		log_Err_Abort "mri_surf2surf command for left hemisphere failed with return_code: ${return_code}"
 	fi
-
-	log_Msg "...Concatenate the ${t2_or_flair}raw->orig and orig->rawavg transforms"
-	mri_concatenate_lta_cmd="mri_concatenate_lta"
-	mri_concatenate_lta_cmd+=" transforms/${t2_or_flair}raw.lta"
-	mri_concatenate_lta_cmd+=" transforms/orig-to-rawavg.lta"
-	mri_concatenate_lta_cmd+=" Q.lta"
-
-	log_Msg "......The following concatenates transforms/${t2_or_flair}raw.lta and transforms/orig-to-rawavg.lta to get Q.lta"
-	log_Msg "......mri_concatenate_lta_cmd: ${mri_concatenate_lta_cmd}"
-	${mri_concatenate_lta_cmd}
+	
+	mri_surf2surf --s ${SubjectID} --sval-xyz white --reg $reg --tval-xyz ${mridir}/rawavg.mgz --tval white.deformed --surfreg white --hemi rh
 	return_code=$?
 	if [ "${return_code}" != "0" ]; then
-		log_Err_Abort "mri_concatenate_lta command failed with return_code: ${return_code}"
+		log_Err_Abort "mri_surf2surf command for right hemisphere failed with return_code: ${return_code}"
 	fi
-
-	log_Msg "...Convert to FSL format"
-	tkregister_cmd="tkregister"
-	tkregister_cmd+=" --mov orig/${t2_or_flair}raw.mgz"
-	tkregister_cmd+=" --targ rawavg.mgz"
-	tkregister_cmd+=" --reg Q.lta"
-	tkregister_cmd+=" --fslregout transforms/${T2wtoT1wFile}"
-	tkregister_cmd+=" --noedit"
-
-	log_Msg "......The following produces the transforms/${T2wtoT1wFile} file that we need"
-	log_Msg "......tkregister_cmd: ${tkregister_cmd}"
-
-	${tkregister_cmd}
-	return_code=$?
-	if [ "${return_code}" != "0" ]; then
-		log_Err_Abort "tkregister command failed with return_code: ${return_code}"
-	fi
-
-	log_Msg "...Clean up"
-	rm deleteme.dat
-	rm Q.lta
-
+	
 	popd
-fi
+	
+	# ----------------------------------------------------------------------
+	log_Msg "Generating QC file"
+	# ----------------------------------------------------------------------
 
-# ----------------------------------------------------------------------
-log_Msg "Creating white surface files in rawavg space"
-# ----------------------------------------------------------------------
+	make_t1w_hires_nifti_file "${mridir}"
 
-pushd ${mridir}
+	if [ "${T2wImage}" != "NONE" ]; then
 
-export SUBJECTS_DIR="$SubjectDIR"
+		make_t2w_hires_nifti_file "${mridir}"
 
-reg=$mridir/transforms/orig2rawavg.dat
-# generate registration between conformed and hires based on headers
-# Note that the convention of tkregister2 is that the resulting $reg is the registration
-# matrix that maps from the "--targ" space into the "--mov" space. 
+		make_t1wxt2w_qc_file "${mridir}"
+	fi
 
-tkregister2 --mov ${mridir}/rawavg.mgz --targ ${mridir}/orig.mgz --noedit --regheader --reg $reg
-
-#The ?h.white.deformed surfaces are used in FreeSurfer BBR registrations for fMRI and diffusion and have been moved into the HCP's T1w space so that BBR produces a transformation containing only the minor adjustment to the registration.  
-mri_surf2surf --s ${SubjectID} --sval-xyz white --reg $reg --tval-xyz ${mridir}/rawavg.mgz --tval white.deformed --surfreg white --hemi lh
-return_code=$?
-if [ "${return_code}" != "0" ]; then
-	log_Err_Abort "mri_surf2surf command for left hemisphere failed with return_code: ${return_code}"
-fi
-
-mri_surf2surf --s ${SubjectID} --sval-xyz white --reg $reg --tval-xyz ${mridir}/rawavg.mgz --tval white.deformed --surfreg white --hemi rh
-return_code=$?
-if [ "${return_code}" != "0" ]; then
-	log_Err_Abort "mri_surf2surf command for right hemisphere failed with return_code: ${return_code}"
-fi
-
-popd
-
-# ----------------------------------------------------------------------
-log_Msg "Generating QC file"
-# ----------------------------------------------------------------------
-
-make_t1w_hires_nifti_file "${mridir}"
-
-if [ "${T2wImage}" != "NONE" ]; then
-
-	make_t2w_hires_nifti_file "${mridir}"
-
-	make_t1wxt2w_qc_file "${mridir}"
-fi
-
-# ----------------------------------------------------------------------
-log_Msg "Completing main functionality"
-# ----------------------------------------------------------------------
-
+	# ----------------------------------------------------------------------
+	log_Msg "Completing main functionality"
+	# ----------------------------------------------------------------------
+}
 
 log_Msg "Completed!"
+exit 0
