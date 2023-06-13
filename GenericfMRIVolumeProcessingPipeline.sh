@@ -14,6 +14,19 @@
 # ---------------------------------------------------------------------------
 #  Constants for specification of susceptibility distortion Correction Method
 # ---------------------------------------------------------------------------
+set -eu
+
+pipedirguessed=0
+if [[ "${HCPPIPEDIR:-}" == "" ]]
+then
+    pipedirguessed=1
+    #fix this if the script is more than one level below HCPPIPEDIR
+    export HCPPIPEDIR="$(dirname -- "$0")/.."
+fi
+
+source "${HCPPIPEDIR}/global/scripts/debug.shlib" "$@"         # Debugging functions; also sources log.shlib
+source "$HCPPIPEDIR/global/scripts/newopts.shlib" "$@"
+source "${HCPPIPEDIR}/global/scripts/processingmodecheck.shlib"  # 
 
 FIELDMAP_METHOD_OPT="FIELDMAP"
 SIEMENS_METHOD_OPT="SiemensFieldMap"
@@ -25,70 +38,51 @@ NONE_METHOD_OPT="NONE"
 # --------------------------------------------------------------------------------
 #  Usage Description Function
 # --------------------------------------------------------------------------------
+opts_SetScriptDescription "Run fMRIVolume processing HCP pipline on data processed by postfreesurfer"
 
-script_name=$(basename "${0}")
 
-show_usage() {
-	cat <<EOF
+  
+opts_AddMandatory '--path' 'Path' 'path_to_study_folder' "" 
 
-${script_name}: Run fMRIVolume processing pipeline
+opts_AddMandatory '--subject' 'Subject' 'subject_ID' ""
 
-Usage: ${script_name} [options]
+opts_AddMandatory '--fmritcs' 'Fmritcs' 'input_fMRI_time_series_(NIFTI)' ""
 
-  [--help] : show usage information and exit
-  --path=<path to study folder>
-  --subject=<subject ID>
-  --fmritcs=<input fMRI time series (NIFTI)>
-  --fmriname=<name (prefix) to use for the output>
-  --fmrires=<final resolution (mm) of the output data>
+opts_AddMandatory '--fmriname' 'Fmriname' 'name_(prefix)_to_use_for_the_output' ""
 
-  --biascorrection=<method to use for receive coil bias field correction>
+opts_AddMandatory '--fmrires' 'Fmrires' 'final_resolution_(mm)_of_the_output_data' "" 
 
-        "SEBASED"
-             use bias field derived from spin echo images, must also use --dcmethod="${SPIN_ECHO_METHOD_OPT}"
+opts_AddMandatory '--biascorrection' 'Biascorrection' 'SEBASED| LEGACY|NONE' "SEBASED: use bias field derived from spin echo images, must also use --dcmethod='${SPIN_ECHO_METHOD_OPT}';
+ LEGACY: use the bias field derived from T1w and T2w images, same as was used in pipeline version 3.14.1 or older (No longer recommended); 
+ NONE: don't do bias correction"
 
-        "LEGACY"
-             use the bias field derived from T1w and T2w images, same as was used in 
-             pipeline version 3.14.1 or older. No longer recommended.
+opts_AddOptional '--fmriscout' 'Fmriscout' 'input_scout_volume' "Used as the target for motion correction and for BBR registration to the structurals.  In HCP-Style acquisitions, the "SBRef" (single-band reference) volume associated with a run is   typically used as the "scout".  Default: "NONE" (in which case the first volume of the time-series is extracted and used as the "scout")  It must have identical dimensions, voxel resolution, and distortions (i.e., phase-encoding   polarity and echo-spacing) as the input fMRI time series" "NONE"
 
-        "NONE"
-             don't do bias correction
+opts_AddOptional '--mctype' 'Mctype' 'type_of_motion_correction_to_use' "What time of motion correction to use MCFLIRT or FLIRT" "MCFLIRT" "" 
 
-  [--fmriscout=<input "scout" volume>]
+opts_AddMandatory '--gdcoeffs' 'Gdcoeffs' 'gradient_non-linearity_distortion_coefficients_(Siemens_format)' "Set to 'NONE' to skip gradient non-linearity distortion correction (GDC)." 
 
-      Used as the target for motion correction and for BBR registration to the structurals.
-      In HCP-Style acquisitions, the "SBRef" (single-band reference) volume associated with a run is 
-      typically used as the "scout".
-      Default: "NONE" (in which case the first volume of the time-series is extracted and used as the "scout")
-      It must have identical dimensions, voxel resolution, and distortions (i.e., phase-encoding 
-      polarity and echo-spacing) as the input fMRI time series
+opts_AddMandatory '--dcmethod' 'Dcmethod' 'method_to_use_for_susceptibility_distortion_correction_(SDC)' "
+        '${FIELDMAP_METHOD_OPT}'
+            equivalent to '${SIEMENS_METHOD_OPT}' (see below)
 
-  [--mctype=<type of motion correction to use: "MCFLIRT" (default) or "FLIRT">]
-
-  --gdcoeffs=<gradient non-linearity distortion coefficients (Siemens format)>
-      Set to "NONE" to skip gradient non-linearity distortion correction (GDC).
-
-  --dcmethod=<method to use for susceptibility distortion correction (SDC)>
-
-        "${FIELDMAP_METHOD_OPT}"
-            equivalent to "${SIEMENS_METHOD_OPT}" (see below)
-
-        "${SIEMENS_METHOD_OPT}"
+        '${SIEMENS_METHOD_OPT}'
              use Siemens specific Gradient Echo Field Maps for SDC
 
-        "${SPIN_ECHO_METHOD_OPT}"
-             use a pair of Spin Echo EPI images ("Spin Echo Field Maps") acquired with
+        '${SPIN_ECHO_METHOD_OPT}'
+             use a pair of Spin Echo EPI images ('Spin Echo Field Maps') acquired with
              opposing polarity for SDC
 
-        "${GENERAL_ELECTRIC_METHOD_OPT}"
+        '${GENERAL_ELECTRIC_METHOD_OPT}'
              use General Electric specific Gradient Echo Field Maps for SDC
 
-        "${PHILIPS_METHOD_OPT}"
+        '${PHILIPS_METHOD_OPT}'
              use Philips specific Gradient Echo Field Maps for SDC
 
-        "${NONE_METHOD_OPT}"
+        '${NONE_METHOD_OPT}'
              do not use any SDC
-             NOTE: Only valid when Pipeline is called with --processing-mode="LegacyStyleData"
+             NOTE: Only valid when Pipeline is called with --processing-mode='LegacyStyleData'"
+
 
   Options required for all --dcmethod options except for "${NONE_METHOD_OPT}":
 
