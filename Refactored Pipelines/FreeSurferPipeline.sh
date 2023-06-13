@@ -130,12 +130,12 @@ opts_SetScriptDescription "Runs the FreeSurfer HCP pipline on data processed by 
 opts_AddMandatory '--subject' 'SubjectID' 'subject' "Subject ID (required)  Used with --path input to create full path to root  directory for all outputs generated as path/subject"
 
 opts_AddOptional  '--subjectDIR' 'SubjectDIR' 'subject' 'path to subject directory required, unless --existing-subject is set' " " "--subject-dir"
-	 
-opts_AddOptional '--t1' 'T1wImage' "T1" 'path to T1w image required, unless --existing-subject is set' " " "--t1w-image"
+ 
+opts_AddOptional '--t1w-image' 'T1wImage' "T1" 'path to T1w image required, unless --existing-subject is set' "" "--t1"
 
-opts_AddOptional '--t1brain' 'T1wImageBrain' "T1Brain" 'path to T1w brain mask required, unless --existing-subject is set' "" "--t1w-brain"
-	 
-opts_AddOptional '--t2' 'T2wImage' "T2" "path to T2w image required, unless --existing-subject is set" "" "--t2w"
+opts_AddOptional '--t1w-brain' 'T1wImageBrain' "T1Brain" 'path to T1w brain mask required, unless --existing-subject is set' "" "--t1brain"
+
+opts_AddOptional '--t2w-image' 'T2wImage' "T2" "path to T2w image required, unless --existing-subject is set" "" "--t2"
 
 opts_AddOptional '--seed' 'recon_all_seed' "Seed" 'recon-all seed value'
 
@@ -147,7 +147,7 @@ opts_AddOptional '--existing-subject' 'existing_subjectString' 'TRUE/FALSE' " In
 opts_AddOptional '--extra-reconall-arg' 'extra_reconall_args' 'token' "(repeatable)  Generic single token argument to pass to recon-all.  Provides a mechanism to:  (i) customize the recon-all command  (ii) specify the recon-all stage(s) to be run (e.g., in the case of FreeSurfer edits)  If you want to avoid running all the stages inherent to the '-all' flag in recon-all,  you also need to include the --existing-subject flag.  The token itself may include dashes and equal signs (although Freesurfer doesn't currently use  equal signs in its argument specification).  e.g., --extra-reconall-arg=-3T is the correct syntax for adding the stand-alone '-3T' flag to recon-all.  But, --extra-reconall-arg='-norm3diters 3' is NOT acceptable.  For recon-all flags that themselves require an argument, you can handle that by specifying  --extra-reconall-arg multiple times (in the proper sequential fashion).  e.g., --extra-reconall-arg=-norm3diters --extra-reconall-arg=3  will be translated to '-norm3diters 3' when passed to recon-all."
 
 opts_AddOptional '--conf2hires' 'conf2hiresString' 'TRUE/FALSE' " Indicates that the script should include -conf2hires as an argument to recon-all.  By default, -conf2hires is included, so that recon-all will place the surfaces on the hires T1 (and T2).  Setting this to false is an advanced option, intended for situations where:  (i) the original T1w and T2w images are NOT 'hires' (i.e., they are 1 mm isotropic or worse), or  (ii) you want to be able to run some flag in recon-all, without also regenerating the surfaces.  e.g., --existing-subject --extra-reconall-arg=-show-edits --conf2hires=FALSE" "TRUE"
-  
+
 opts_AddOptional '--processing-mode' 'ProcessingMode' 'HCPStyleData or LegacyStyleData' " Controls whether the HCP acquisition and processing guidelines should be treated as requirements.  'HCPStyleData' (the default) follows the processing steps described in Glasser et al. (2013)   and requires 'HCP-Style' data acquistion.   'LegacyStyleData' allows additional processing functionality and use of some acquisitions  that do not conform to 'HCP-Style' expectations.  In this script, it allows not having a high-resolution T2w image." "HCPStyleData"
 
 opts_ParseArguments "$@"
@@ -201,7 +201,7 @@ then
 	then
 		ComplianceMsg+=" --t2w-image= or --t2= not present or set to NONE"
 		Compliance="LegacyStyleData"
-    fi
+	fi
 fi
 
 check_mode_compliance "${ProcessingMode}" "${Compliance}" "${ComplianceMsg}"
