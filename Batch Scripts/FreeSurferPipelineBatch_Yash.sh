@@ -96,18 +96,18 @@ for Subject in $Subjlist ; do
 
   "${queuing_command[@]}" "$HCPPIPEDIR"/FreeSurfer/FreeSurferPipeline.sh \
       --subject="$Subject" \
-      --subjectDIR="$SubjectDIR" \
-      --t1="$T1wImage" \
-      --t1brain="$T1wImageBrain" \
-      --t2="$T2wImage"
+      --subject-dir="$SubjectDIR" \
+      --t1w-image="$T1wImage" \
+      --t1w-brain="$T1wImageBrain" \
+      --t2w-image="$T2wImage"
       
   # The following lines are used for interactive debugging to set the positional parameters: $1 $2 $3 ...
 
   echo "set -- --subject=$Subject \
-      --subjectDIR=$SubjectDIR \
-      --t1=$T1wImage \
-      --t1brain=$T1wImageBrain \
-      --t2=$T2wImage"
+      --subject-dir=$SubjectDIR \
+      --t1w-image=$T1wImage \
+      --t1w-brain=$T1wImageBrain \
+      --t2w-image=$T2wImage"
 
   echo ". ${EnvironmentScript}"
 

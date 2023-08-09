@@ -52,9 +52,7 @@ opts_AddMandatory '--fmriname' 'Fmriname' 'name_(prefix)_to_use_for_the_output' 
 
 opts_AddMandatory '--fmrires' 'Fmrires' 'final_resolution_(mm)_of_the_output_data' "" 
 
-opts_AddMandatory '--biascorrection' 'Biascorrection' 'SEBASED| LEGACY|NONE' "SEBASED: use bias field derived from spin echo images, must also use --dcmethod='${SPIN_ECHO_METHOD_OPT}';
- LEGACY: use the bias field derived from T1w and T2w images, same as was used in pipeline version 3.14.1 or older (No longer recommended); 
- NONE: don't do bias correction"
+opts_AddMandatory '--biascorrection' 'Biascorrection' 'SEBASED| LEGACY|NONE' "SEBASED: use bias field derived from spin echo images, must also use --dcmethod='${SPIN_ECHO_METHOD_OPT}'; LEGACY: use the bias field derived from T1w and T2w images, same as was used in pipeline version 3.14.1 or older (No longer recommended); NONE: don't do bias correction"
 
 opts_AddOptional '--fmriscout' 'Fmriscout' 'input_scout_volume' "Used as the target for motion correction and for BBR registration to the structurals.  In HCP-Style acquisitions, the "SBRef" (single-band reference) volume associated with a run is   typically used as the "scout".  Default: "NONE" (in which case the first volume of the time-series is extracted and used as the "scout")  It must have identical dimensions, voxel resolution, and distortions (i.e., phase-encoding   polarity and echo-spacing) as the input fMRI time series" "NONE"
 
@@ -63,6 +61,7 @@ opts_AddOptional '--mctype' 'Mctype' 'type_of_motion_correction_to_use' "What ti
 opts_AddMandatory '--gdcoeffs' 'Gdcoeffs' 'gradient_non-linearity_distortion_coefficients_(Siemens_format)' "Set to 'NONE' to skip gradient non-linearity distortion correction (GDC)." 
 
 opts_AddMandatory '--dcmethod' 'Dcmethod' 'method_to_use_for_susceptibility_distortion_correction_(SDC)' "
+
         '${FIELDMAP_METHOD_OPT}'
             equivalent to '${SIEMENS_METHOD_OPT}' (see below)
 
@@ -84,36 +83,38 @@ opts_AddMandatory '--dcmethod' 'Dcmethod' 'method_to_use_for_susceptibility_dist
              NOTE: Only valid when Pipeline is called with --processing-mode='LegacyStyleData'"
 
 
-  Options required for all --dcmethod options except for "${NONE_METHOD_OPT}":
+  # Options required for all --dcmethod options except for "${NONE_METHOD_OPT}":
 
-    [--echospacing=<*effective* echo spacing of fMRI input, in seconds>]
-    [--unwarpdir=<PE direction for unwarping according to the *voxel* axes: 
-       {x,y,z,x-,y-,z-} or {i,j,k,i-,j-,k-}>]
-          Polarity matters!  If your distortions are twice as bad as in the original images, 
-          try using the opposite polarity for --unwarpdir.
+opts_AddOptional '--echospacing' 'Echospacing' 'effective echo spacing of fMRI input or  in seconds' ""
 
-  Options required if using --dcmethod="${SPIN_ECHO_METHOD_OPT}":
+opts_AddMandatory '--unwarpdir' 'unwarpdir' '{x,y,z,x-,y-,z-} or {i,j,k,i-,j-,k-}' "PE direction for unwarping according to the *voxel* axes, Polarity matters!  If your distortions are twice as bad as in the original images, try using the opposite polarity for --unwarpdir."
 
-    [--SEPhaseNeg=<"negative" polarity SE-EPI image>]
-    [--SEPhasePos=<"positive" polarity SE-EPI image>]
-    [--topupconfig=<topup config file>]
+  # Options required if using --dcmethod="${SPIN_ECHO_METHOD_OPT}":
 
-  Options required if using --dcmethod="${SIEMENS_METHOD_OPT}":
+opts_AddOptional '--SEPhaseNeg' 'Sephaseneg' 'negative polarity SE-EPI image' ""
 
-    [--fmapmag=<input Siemens field map magnitude image>]
-    [--fmapphase=input Siemens field map phase image>]
-    [--echodiff=<difference of echo times for fieldmap, in milliseconds>]
+opts_AddOptional '--SEPhasePos' 'SEPhasePos' 'positive polarity SE-EPI image' "" 
 
-  Options required if using --dcmethod="${GENERAL_ELECTRIC_METHOD_OPT}":
+opts_AddOptional '--topupconfig' 'Topupconfig' 'topup config file' ""
+
+  # Options required if using --dcmethod="${SIEMENS_METHOD_OPT}":
+
+opts_AddOptional '--fmapmag' 'Fmapmag' 'input Siemens field map magnitude image' "" 
+
+opts_AddOptional '--fmapphase' 'Fmapphase' 'input Siemens field map phase image' ""
+
+opts_AddOptional '--echodiff' 'Echodiff' 'difference of echo times for fieldmap or in milliseconds' ""
+
+  # Options required if using --dcmethod="${GENERAL_ELECTRIC_METHOD_OPT}":
 
     [--fmapgeneralelectric=<input General Electric field map image>]
 
-  Options required if using --dcmethod="${PHILIPS_METHOD_OPT}":
+  # Options required if using --dcmethod="${PHILIPS_METHOD_OPT}":
 
     [--fmapmag=<input Philips field map magnitude image>]
     [--fmapphase=input Philips field map phase image>]
 
-  OTHER OPTIONS:
+  # OTHER OPTIONS:
 
   [--dof=<Degrees of freedom for the EPI to T1 registration: 6 (default), 9, or 12>]
 
@@ -133,10 +134,10 @@ opts_AddMandatory '--dcmethod' 'Dcmethod' 'method_to_use_for_susceptibility_dist
         that do not conform to 'HCP-Style' expectations.  
 
 
-  -------- "LegacyStyleData" MODE OPTIONS --------
+  # -------- "LegacyStyleData" MODE OPTIONS --------
 
-   Use --processing-mode-info to see important additional information and warnings about the use of 
-   the following options!
+  #  Use --processing-mode-info to see important additional information and warnings about the use of 
+  #  the following options!
 
   [--preregistertool=<"epi_reg" (default) or "flirt">]
 
