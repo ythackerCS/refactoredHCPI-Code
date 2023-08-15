@@ -32,16 +32,25 @@ source "${HCPPIPEDIR}/global/scripts/debug.shlib" "$@"         # Debugging funct
 source "$HCPPIPEDIR/global/scripts/newopts.shlib" "$@"
 source "${HCPPIPEDIR}/global/scripts/processingmodecheck.shlib"  # Check processing mode requirements
 
-opts_SetScriptDescription "Run fMRISurface processing HCP pipline on data processed by postfreesurfer"
-opts_AddMandatory '--path' 'Path' "path to study folder" ""
+opts_SetScriptDescription "Run fMRISurface processing"
+
+opts_AddMandatory '--studyfolder' 'Path' 'path' "folder containing all subject" "--path"
+
 opts_AddMandatory '--subject' 'Subject' 'subject ID' ""
-opts_AddMandatory '--fmriname' 'NameOffMRI' 'name (prefix) to use for the output' ""
-opts_AddMandatory '--lowresmesh' 'LowResMesh' 'low_res_mesh_number' ""
-opts_AddMandatory '--fmrires' 'FinalfMRIResolution' 'final resolution (mm) of the output data' ""
-opts_AddMandatory '--smoothingFWHM' 'SmoothingFWHM' 'smoothing_FWHM_(mm)' ""
-opts_AddMandatory '--grayordinatesres' 'GrayordinatesResolution' 'grayordinates_res_(mm)' ""
-opts_AddOptional '--regname' 'RegName' 'surface_registration_name' "The surface registeration name, defaults to 'MSMSulc'" "MSMSulc"
-opts_AddOptional '--fmri-qc' 'QCMode' '"YES OR NO OR ONLY"' "Controls whether to generate a QC scene and snapshots (default=YES). ONLY executes *just* the QC script, skipping everything else (e.g., for previous data)" "YES"
+
+opts_AddMandatory '--fmriname' 'NameOffMRI' 'string' 'name (prefix) to use for the output'
+
+opts_AddMandatory '--lowresmesh' 'LowResMesh' 'number' 'low res mesh number'
+
+opts_AddMandatory '--fmrires' 'FinalfMRIResolution' 'number' 'final resolution (mm) of the output data'
+
+opts_AddMandatory '--smoothingFWHM' 'SmoothingFWHM' 'number' 'smoothing FWHM (mm)'
+
+opts_AddMandatory '--grayordinatesres' 'GrayordinatesResolution' 'number' 'grayordinates resolution (mm)'
+
+opts_AddOptional '--regname' 'RegName' 'string' "The surface registeration name, defaults to 'MSMSulc'" "MSMSulc"
+
+opts_AddOptional '--fmri-qc' 'QCMode' 'YES OR NO OR ONLY' "Controls whether to generate a QC scene and snapshots (default=YES). ONLY executes *just* the QC script, skipping everything else (e.g., for previous data)" "YES"
 
 opts_ParseArguments "$@"
 
@@ -71,34 +80,12 @@ HCPPIPEDIR_fMRISurf=${HCPPIPEDIR}/fMRISurface/scripts
 log_Msg "Platform Information Follows: "
 uname -a
 
-log_Msg "Parsing Command Line Options"
-
-# # parse arguments
-# Path=`opts_GetOpt1 "--path" $@`
-# Subject=`opts_GetOpt1 "--subject" $@`
-# NameOffMRI=`opts_GetOpt1 "--fmriname" $@`
-# LowResMesh=`opts_GetOpt1 "--lowresmesh" $@`
-# FinalfMRIResolution=`opts_GetOpt1 "--fmrires" $@`
-# SmoothingFWHM=`opts_GetOpt1 "--smoothingFWHM" $@`
-# GrayordinatesResolution=`opts_GetOpt1 "--grayordinatesres" $@`
-# RegName=`opts_GetOpt1 "--regname" $@`
-# RegName=`opts_DefaultOpt $RegName MSMSulc`
-# QCMode=`opts_GetOpt1 "--fmri-qc" $@`
-# QCMode=`opts_DefaultOpt $QCMode YES`
-# QCMode="$(echo ${QCMode} | tr '[:upper:]' '[:lower:]')"  # Convert to all lowercase
+##Convert to lowercase for QCMode
+QCMode="$(echo ${QCMode} | tr '[:upper:]' '[:lower:]')"  # Convert to all lowercase
 
 doProcessing=1
 doQC=1
 
-log_Msg "Path: ${Path}"
-log_Msg "Subject: ${Subject}"
-log_Msg "NameOffMRI: ${NameOffMRI}"
-log_Msg "LowResMesh: ${LowResMesh}"
-log_Msg "FinalfMRIResolution: ${FinalfMRIResolution}"
-log_Msg "SmoothingFWHM: ${SmoothingFWHM}"
-log_Msg "GrayordinatesResolution: ${GrayordinatesResolution}"
-log_Msg "RegName: ${RegName}"
-log_Msg "QCMode: $QCMode"
 case "$QCMode" in
     (yes)
         ;;
@@ -107,7 +94,7 @@ case "$QCMode" in
         ;;
     (only)
         doProcessing=0
-		log_Warn "Only generating fMRI QC scene and snapshots from existing data (no other processing)"
+        log_Warn "Only generating fMRI QC scene and snapshots from existing data (no other processing)"
         ;;
     (*)
         log_Err_Abort "unrecognized value '$QCMode' for --fmri-qc, use 'YES', 'NO', or 'ONLY'"
