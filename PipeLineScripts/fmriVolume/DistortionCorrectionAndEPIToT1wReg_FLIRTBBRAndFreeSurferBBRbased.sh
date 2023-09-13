@@ -37,8 +37,6 @@ source "$HCPPIPEDIR/global/scripts/newopts.shlib" "$@"
 
 opts_SetScriptDescription "Script to register EPI to T1w, with distortion correction"
 
-opts_AddMandatory '--workingdir' 'WD' 'path' 'working dir'
-
 opts_AddMandatory '--scoutin' 'ScoutInputName' 'image' "input scout image (pre-sat EPI)"
 
 opts_AddMandatory '--t1' 'T1wImage' 'image' "input T1-weighted image"
@@ -59,8 +57,7 @@ opts_AddMandatory '--ojacobian' 'JacobianOut' 'name' "output filename for Jacobi
 
 opts_AddMandatory '--oregim' 'RegOutput' 'name' "output registered image (EPI to T1w)"
 
-#Tims special parsing for to bool? 
-opts_AddMandatory '--usejacobian' 'UseJacobian' 'boolean' "'TRUE' or 'FALSE'"
+opts_AddMandatory '--usejacobian' 'UseJacobian' 'true or false' "apply jacobian correction to distortion-corrected SBRef and other files"
 
 opts_AddMandatory '--gdcoeffs' 'GradientDistortionCoeffs' 'coefficients (Siemens Format)' "Gradient non-linearity distortion coefficients (Siemens format), set to "NONE" to skip gradient non-linearity distortion correction (GDC)."
 
@@ -98,6 +95,8 @@ opts_AddMandatory '--method' 'DistortionCorrection' 'method' "method to use for 
 
 
 #Optional Args 
+opts_AddOptional '--workingdir' 'WD' 'path' 'working dir' ""
+
 opts_AddOptional '--echospacing' 'EchoSpacing' 'spacing (seconds)' "*effective* echo spacing of fMRI input, in seconds"
 
 opts_AddOptional '--unwarpdir' 'UnwarpDir' '{x,y,z,x-,y-,z-} or {i,j,k,i-,j-,k-}>]' "PE direction for unwarping according to the *voxel* axes. Polarity matters! If your distortions are twice as bad as in the original images, try using the opposite polarity for --unwarpdir."
@@ -106,7 +105,7 @@ opts_AddOptional '--SEPhaseNeg' 'SpinEchoPhaseEncodeNegative' 'number' "'negativ
 
 opts_AddOptional '--SEPhasePos' 'SpinEchoPhaseEncodePositive' 'number' "'positive' polarity SE-EPI image"
 
-opts_AddOptional '--topupconfig' 'TopupConfig' 'file' "topup config file"
+opts_AddOptional '--topupconfig' 'TopupConfig' 'file' "topup config file" "${HCPPIPEDIR_Config}/b02b0.cnf"
 
 opts_AddOptional '--subjectfolder' 'SubjectFolder' 'path' "subject processing folder"
 
@@ -120,9 +119,9 @@ opts_AddOptional '--fmapgeneralelectric' 'GEB0InputName' 'image' "input General 
 
 opts_AddOptional '--dof' 'dof' '6 OR 9 OR 12' "degrees of freedom for EPI to T1 registration" '6'
 
-opts_AddOptional '--qaimage' 'QAImage' 'name' "output name for QA image"
+opts_AddOptional '--qaimage' 'QAImage' 'name' "output name for QA image" "T1wMulEPI"
 
-opts_AddOptional '--preregistertool' 'PreregisterTool' ''epi_reg' OR 'flirt'' "'epi_reg' (default) OR 'flirt'" "epi_reg"
+opts_AddOptional '--preregistertool' 'PreregisterTool' "'epi_reg' OR 'flirt'" "'epi_reg' (default) OR 'flirt'" "epi_reg"
 
 opts_AddOptional '--fmriname' 'NameOffMRI' 'name' "name of fmri run"
 
@@ -140,6 +139,7 @@ log_Check_Env_Var FSLDIR
 log_Check_Env_Var FREESURFER_HOME
 log_Check_Env_Var HCPPIPEDIR_Global
 
+UseJacobian=$(opts_StringToBool "$UseJacobian")
 
 # show_usage() {
 # 	cat <<EOF
@@ -330,24 +330,14 @@ esac
 
 ScoutInputFile=`basename $ScoutInputName`
 T1wBrainImageFile=`basename $T1wBrainImage`
-
+RegOutput=`$FSLDIR/bin/remove_ext $RegOutput`
+GlobalScripts=${HCPPIPEDIR_Global}
 
 ###### IM CONFUSED WHICH ONES ARE DEFAULT PARAMETERS HERE??
 # default parameters
-RegOutput=`$FSLDIR/bin/remove_ext $RegOutput`
-WD=`defaultopt $WD ${RegOutput}.wdir`
-dof=`defaultopt $dof 6`
-GlobalScripts=${HCPPIPEDIR_Global}
-TopupConfig=`defaultopt $TopupConfig ${HCPPIPEDIR_Config}/b02b0.cnf`
-QAImage=`defaultopt $QAImage T1wMulEPI`
-PreregisterTool=${PreregisterTool:-epi_reg}
-
-# Convert UseJacobian value to all lowercase (to allow the user the flexibility to use True, true, TRUE, False, False, false, etc.)
-UseJacobian="$(echo ${UseJacobian} | tr '[:upper:]' '[:lower:]')"
-#sanity check the jacobian option
-if [[ "$UseJacobian" != "true" && "$UseJacobian" != "false" ]]
+if [[ $WD == "" ]]
 then
-    log_Err_Abort "the --usejacobian option must be 'true' or 'false'"
+    WD="${RegOutput}.wdir"
 fi
 
 log_Msg "START"
@@ -539,7 +529,7 @@ case $DistortionCorrection in
 
         # apply Jacobian correction to scout image (optional)
         # gdc jacobian is already applied in main script, where the gdc call for the scout is
-        if [[ $UseJacobian == "true" ]]
+        if ((UseJacobian))
         then
             log_Msg "apply Jacobian correction to scout image"
             ${FSLDIR}/bin/fslmaths ${WD}/${ScoutInputFile}${ScoutExtension} -mul ${WD}/Jacobian.nii.gz ${WD}/${ScoutInputFile}${ScoutExtension}
@@ -579,7 +569,7 @@ case $DistortionCorrection in
         for File in ${Files}
         do
             #NOTE: this relies on TopupPreprocessingAll generating _jac versions of the files
-            if [[ $UseJacobian == "true" ]]
+            if ((UseJacobian))
             then
                 ${FSLDIR}/bin/applywarp --interp=spline -i "${WD}/FieldMap/${File}_jac" -r ${ReferenceImage} --premat=${WD}/fMRI2str.mat -o ${WD}/${File}
             else
@@ -648,7 +638,7 @@ case $DistortionCorrection in
 esac
 
 # apply Jacobian correction and bias correction options to scout image
-if [[ $UseJacobian == "true" ]] ; then
+if ((UseJacobian)) ; then
     log_Msg "apply Jacobian correction to scout image"
     if [[ "$UseBiasField" != "" ]]
     then
@@ -762,7 +752,7 @@ then
     Files="PhaseOne_gdc_dc PhaseTwo_gdc_dc SBRef_dc"
     for File in ${Files}
     do
-        if [[ $UseJacobian == "true" ]]
+        if ((UseJacobian))
         then
             ${FSLDIR}/bin/applywarp --interp=spline -i "${WD}/FieldMap/${File}_jac" -r ${ReferenceImage} --premat=${WD}/fMRI2str.mat -o ${WD}/${File}
         else
@@ -828,7 +818,7 @@ ${FSLDIR}/bin/applywarp --rel --interp=spline -i ${ScoutInputName} -r ${T1wImage
 # resample fieldmap jacobian with new registration
 ${FSLDIR}/bin/applywarp --rel --interp=spline -i ${WD}/Jacobian.nii.gz -r ${T1wImage} --premat=${WD}/fMRI2str.mat -o ${WD}/Jacobian2T1w.nii.gz
 
-if [[ $UseJacobian == "true" ]]
+if ((UseJacobian))
 then
     log_Msg "applying Jacobian modulation"
     if [[ "$UseBiasField" != "" ]]

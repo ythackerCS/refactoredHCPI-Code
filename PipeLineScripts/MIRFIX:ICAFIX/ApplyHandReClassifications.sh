@@ -20,22 +20,19 @@ source "${HCPPIPEDIR}/global/scripts/fsl_version.shlib"        # Functions for g
 source "${HCPPIPEDIR}/global/scripts/debug.shlib" "$@"         # Debugging functions; also sources log.shlib
 source "$HCPPIPEDIR/global/scripts/newopts.shlib" "$@"
 
-
-
 opts_SetScriptDescription "Apply Hand Reclassifications of Noise and Signal components from FIX using the ReclassifyAsNoise.txt and ReclassifyAsSignal.txt input files. Generates HandNoise.txt and HandSignal.txt as output. Script does NOT reapply the FIX cleanup. For that, use the ReApplyFix scripts."
 
-opts_AddMandatory '--study-folder' 'p_StudyFolder' 'path' "path to study folder" "" "--path"
+opts_AddMandatory '--study-folder' 'StudyFolder' 'path' "path to study folder" "--path"
 
-opts_AddMandatory '--subject' 'p_Subject' 'id' "subject ID"
+opts_AddMandatory '--subject' 'Subject' 'id' "subject ID"
 
-opts_AddMandatory '--fmri-name' 'p_fMRIName' 'string' "fMRI name"
+opts_AddMandatory '--fmri-name' 'fMRIName' 'string' "fMRI name"
 
-### IS IT A NUMBER?????
-opts_AddMandatory '--high-pass' 'p_HighPass' 'number' "high-pass filter used in ICA+FIX"
+opts_AddMandatory '--high-pass' 'HighPass' 'amount' "high-pass filter used in ICA+FIX"
 
-##Optional Args
-##MATLAB MODE???????
-opts_AddOptional '--matlab-run-mode' 'g_matlab_run_mode' '0, 1, 2' "defaults to ${G_DEFAULT_MATLAB_RUN_MODE}
+##Optional Args 
+## MATLAB RUN MODE IS NOT ACTUALLY USED
+opts_AddOptional '--matlab-run-mode' 'g_matlab_run_mode' '0, 1, 2' "defaults to ${G_DEFAULT_MATLAB_RUN_MODE} 
      0 = Use compiled MATLAB
      1 = Use interpreted MATLAB
      2 = Use octave" "${G_DEFAULT_MATLAB_RUN_MODE}"
@@ -51,6 +48,14 @@ fi
 opts_ShowValues
 
 log_Check_Env_Var FSLDIR
+# Show HCP Pipelines Version
+log_Msg "Showing HCP Pipelines version"
+"${HCPPIPEDIR}"/show_version --short
+
+# Show FSL version
+log_Msg "Showing FSL version"
+fsl_version_get fsl_ver
+log_Msg "FSL version: ${fsl_ver}"
 
 # show_usage()
 # {
@@ -219,16 +224,16 @@ list_file_to_lookup()
 
 # main()
 # {
-get_options $@
+#get_options $@
 show_tool_versions
 
 # NOTE: HighPass flag may be "pd*", if polynomial detrending was requested in 
 # hcp_fix_multi_run (not supported in hcp_fix currently)
 
-if [[ "${p_HighPass}" == pd* ]]; then
-	hpNum=${p_HighPass:2}
+if [[ "${HighPass}" == pd* ]]; then
+	hpNum=${HighPass:2}
 else
-	hpNum=${p_HighPass}
+	hpNum=${HighPass}
 fi
 
 # Confirm that $hpNum is a valid numeric
@@ -241,20 +246,20 @@ fi
 if (( hpNum < 0 )); then
 	hpStr=""
 else
-	hpStr="_hp${p_HighPass}"
+	hpStr="_hp${HighPass}"
 fi
 
 # Naming Conventions
-AtlasFolder="${p_StudyFolder}/${p_Subject}/MNINonLinear"
+AtlasFolder="${StudyFolder}/${Subject}/MNINonLinear"
 log_Msg "AtlasFolder: ${AtlasFolder}"
 
-ResultsFolder="${AtlasFolder}/Results/${p_fMRIName}"
+ResultsFolder="${AtlasFolder}/Results/${fMRIName}"
 log_Msg "ResultsFolder: ${ResultsFolder}"
 
-ICAFolder="${ResultsFolder}/${p_fMRIName}${hpStr}.ica/filtered_func_data.ica"
+ICAFolder="${ResultsFolder}/${fMRIName}${hpStr}.ica/filtered_func_data.ica"
 log_Msg "ICAFolder: ${ICAFolder}"
 
-FIXFolder="${ResultsFolder}/${p_fMRIName}${hpStr}.ica"
+FIXFolder="${ResultsFolder}/${fMRIName}${hpStr}.ica"
 log_Msg "FIXFolder: ${FIXFolder}"
 
 OriginalFixSignal="${FIXFolder}/Signal.txt"
@@ -364,20 +369,20 @@ log_Msg "Completed!"
 #  "Global" processing - everything above here should be in a function
 # ------------------------------------------------------------------------------
 
-# Set global variables
-g_script_name=$(basename "${0}")
+# # Set global variables
+# g_script_name=$(basename "${0}")
 
-# Allow script to return a Usage statement, before any other output
-if [ "$#" = "0" ]; then
-    show_usage
-    exit 1
-fi
+# # Allow script to return a Usage statement, before any other output
+# if [ "$#" = "0" ]; then
+#     show_usage
+#     exit 1
+# fi
 
-# Verify that HCPPIPEDIR environment variable is set
-if [ -z "${HCPPIPEDIR}" ]; then
-    echo "${g_script_name}: ABORTING: HCPPIPEDIR environment variable must be set"
-    exit 1
-fi
+# # Verify that HCPPIPEDIR environment variable is set
+# if [ -z "${HCPPIPEDIR}" ]; then
+#     echo "${g_script_name}: ABORTING: HCPPIPEDIR environment variable must be set"
+#     exit 1
+# fi
 
 # # Load function libraries
 # source "${HCPPIPEDIR}/global/scripts/debug.shlib" "$@"         # Debugging functions; also sources log.shlib

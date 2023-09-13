@@ -47,7 +47,6 @@ source "${HCPPIPEDIR}/global/scripts/fsl_version.shlib"        # Functions for g
 source "${HCPPIPEDIR}/global/scripts/debug.shlib" "$@"         # Debugging functions; also sources log.shlib
 source "$HCPPIPEDIR/global/scripts/newopts.shlib" "$@"
 
-
 opts_SetScriptDescription "This script has two purposes:
 1) Reapply FIX cleanup to the volume and default CIFTI (i.e., MSMSulc registered surfaces)
 following manual reclassification of the FIX signal/noise components (see ApplyHandReClassifications.sh).
@@ -55,30 +54,27 @@ following manual reclassification of the FIX signal/noise components (see ApplyH
 (either for the first time, or following manual reclassification of the components).
 Only one of these two purposes can be accomplished per invocation."
 
+opts_AddMandatory '--study-folder' 'StudyFolder' 'path' "path to study folder" "--path"
 
-opts_AddMandatory '--study-folder' 'p_StudyFolder' 'path' "path to study folder" "" "--path"
+opts_AddMandatory '--subject' 'Subject' 'id' "subject ID"
 
-opts_AddMandatory '--subject' 'p_Subject' 'id' "subject ID"
+opts_AddMandatory '--fmri-name' 'fMRIName' 'string' "In the case of applying PostFix to the output of multi-run FIX, <fMRI name> should be the <concat_name> used in multi-run FIX."
 
-opts_AddMandatory '--fmri-name' 'p_fMRIName' 'string' "In the case of applying PostFix to the output of multi-run FIX, <fMRI name> should be the <concat_name> used in multi-run FIX."
-
-opts_AddMandatory '--high-pass' 'p_HighPass' 'number' "high-pass filter used in ICA+FIX"
+opts_AddMandatory '--high-pass' 'HighPass' 'number' "high-pass filter used in ICA+FIX"
 
 #Optional Args 
-opts_AddOptional '--reg-name' 'p_RegName' 'name' "surface registration name (Use NONE for MSMSulc registration)" "NONE"
+opts_AddOptional '--reg-name' 'RegName' 'name' "surface registration name (Use NONE for MSMSulc registration)"
 
-opts_AddOptional '--low-res-mesh' 'p_LowResMesh' 'number' "low res mesh number" "32"
+opts_AddOptional '--low-res-mesh' 'LowResMesh' 'number' "low res mesh number" "32"
 
-opts_AddOptional '--matlab-run-mode' 'p_MatlabRunMode' '0, 1, 2' "defaults to 1
+opts_AddOptional '--matlab-run-mode' 'MatlabRunMode' '0, 1, 2' "defaults to 1
      0 = Use compiled MATLAB
      1 = Use interpreted MATLAB
      2 = Use octave" "1"
 
-## NEEDS TO BOOL logic????? 
-opts_AddOptional '--motion-regression' 'p_MotionRegression' 'TRUE or FALSE' "Perform motion regression: TRUE or  FALSE" "FALSE"
+opts_AddOptional '--motion-regression' 'MotionRegression' 'TRUE or FALSE' "Perform motion regression, default false" "FALSE"
 
-opts_AddOptional '--delete-intermediates' 'p_DeleteIntermediates' 'TRUE or FALSE' "If TRUE, deletes the high-pass filtered files." "FALSE"
-
+opts_AddOptional '--delete-intermediates' 'DeleteIntermediates' 'TRUE or FALSE' "Delete the high-pass filtered files, default false" "FALSE"
 
 opts_ParseArguments "$@"
 
@@ -94,6 +90,24 @@ log_Check_Env_Var CARET7DIR
 log_Check_Env_Var FSLDIR
 log_Check_Env_Var FSL_FIXDIR
 
+#support NONE convention
+if [[ "$RegName" == "NONE" ]]
+then
+    RegName=""
+fi
+
+#previous bool conversion accepted NONE to mean false
+if [[ "$MotionRegression" == "NONE" ]]
+then
+    MotionRegression="false"
+fi
+if [[ "$DeleteIntermediates" == "NONE" ]]
+then
+    DeleteIntermediates="false"
+fi
+
+MotionRegression=$(opts_StringToBool "$MotionRegression")
+DeleteIntermediates=$(opts_StringToBool "$DeleteIntermediates")
 
 # show_usage()
 # {
@@ -361,21 +375,21 @@ have_hand_reclassification()
 	fi
 }
 
-function interpret_as_bool()
-{
-    case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
-    (true | yes | 1)
-        echo 1
-        ;;
-    (false | no | none | 0)
-        echo 0
-        ;;
-    (*)
-        log_Err_Abort "error: '$1' is not valid for this argument, please use TRUE or FALSE"
-        ;;
-    esac
-}
-
+#function interpret_as_bool()
+#{
+#    case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
+#    (true | yes | 1)
+#        echo 1
+#        ;;
+#    (false | no | none | 0)
+#        echo 0
+#        ;;
+#    (*)
+#        log_Err_Abort "error: '$1' is not valid for this argument, please use TRUE or FALSE"
+#        ;;
+#    esac
+#}
+#
 # ------------------------------------------------------------------------------
 #  Main processing of script.
 # ------------------------------------------------------------------------------
@@ -385,66 +399,64 @@ function interpret_as_bool()
 log_Msg "Starting main functionality"
 
 # Retrieve positional parameters
-local StudyFolder="${1}"
-local Subject="${2}"
-local fMRIName="${3}"
-local HighPass="${4}"
-
-local RegName
-if [ -z "${5}" ]; then
-	RegName=${G_DEFAULT_REG_NAME}
-else
-	RegName="${5}"
-fi
-
-local LowResMesh
-if [ -z "${6}" ]; then
-	LowResMesh=${G_DEFAULT_LOW_RES_MESH}
-else
-	LowResMesh="${6}"
-fi
-
-local MatlabRunMode
-if [ -z "${7}" ]; then
-	MatlabRunMode=${G_DEFAULT_MATLAB_RUN_MODE}
-else
-	MatlabRunMode="${7}"
-fi
-
-local MotionRegression
-if [ -z "${8}" ]; then
-	MotionRegression=$(interpret_as_bool "${G_DEFAULT_MOTION_REGRESSION}")
-else
-	MotionRegression=$(interpret_as_bool "${8}")
-fi
-
-local DeleteIntermediates
-if [ -z "${9}" ]; then
-	DeleteIntermediates=$(interpret_as_bool "${G_DEFAULT_DELETE_INTERMEDIATES}")
-else
-	DeleteIntermediates=$(interpret_as_bool "${9}")
-fi
-
+#local StudyFolder="${1}"
+#local Subject="${2}"
+#local fMRIName="${3}"
+#local HighPass="${4}"
+#
+#local RegName
+#if [ -z "${5}" ]; then
+#	RegName=${G_DEFAULT_REG_NAME}
+#else
+#	RegName="${5}"
+#fi
+#
+#local LowResMesh
+#if [ -z "${6}" ]; then
+#	LowResMesh=${G_DEFAULT_LOW_RES_MESH}
+#else
+#	LowResMesh="${6}"
+#fi
+#
+#local MatlabRunMode
+#if [ -z "${7}" ]; then
+#	MatlabRunMode=${G_DEFAULT_MATLAB_RUN_MODE}
+#else
+#	MatlabRunMode="${7}"
+#fi
+#
+#local MotionRegression
+#if [ -z "${8}" ]; then
+#	MotionRegression=$(interpret_as_bool "${G_DEFAULT_MOTION_REGRESSION}")
+#else
+#	MotionRegression=$(interpret_as_bool "${8}")
+#fi
+#
+#local DeleteIntermediates
+#if [ -z "${9}" ]; then
+#	DeleteIntermediates=$(interpret_as_bool "${G_DEFAULT_DELETE_INTERMEDIATES}")
+#else
+#	DeleteIntermediates=$(interpret_as_bool "${9}")
+#fi
+#
 # Log values retrieved from positional parameters
-log_Msg "StudyFolder: ${StudyFolder}"
-log_Msg "Subject: ${Subject}"
-log_Msg "fMRIName: ${fMRIName}"
-log_Msg "HighPass: ${HighPass}"
-log_Msg "RegName: ${RegName}"
-log_Msg "LowResMesh: ${LowResMesh}"
-log_Msg "MatlabRunMode: ${MatlabRunMode}"
-log_Msg "MotionRegression: ${MotionRegression}"
-log_Msg "DeleteIntermediates: ${DeleteIntermediates}"
-
+#log_Msg "StudyFolder: ${StudyFolder}"
+#log_Msg "Subject: ${Subject}"
+#log_Msg "fMRIName: ${fMRIName}"
+#log_Msg "HighPass: ${HighPass}"
+#log_Msg "RegName: ${RegName}"
+#log_Msg "LowResMesh: ${LowResMesh}"
+#log_Msg "MatlabRunMode: ${MatlabRunMode}"
+#log_Msg "MotionRegression: ${MotionRegression}"
+#log_Msg "DeleteIntermediates: ${DeleteIntermediates}"
+#
 # Naming Conventions and other variables
 local Caret7_Command="${CARET7DIR}/wb_command"
 log_Msg "Caret7_Command: ${Caret7_Command}"
 
-local RegString
-if [ ${RegName} != "NONE" ] ; then
+local RegString=""
+if [[ "$RegName" != "" ]] ; then
 	RegString="_${RegName}"
-else
-	RegString=""
 fi
 
 if [ ! -z ${LowResMesh} ] && [ ${LowResMesh} != ${G_DEFAULT_LOW_RES_MESH} ]; then
@@ -488,8 +500,8 @@ fMRIName=$(basename $($FSLDIR/bin/remove_ext $fMRIName))
 if have_hand_reclassification ${StudyFolder} ${Subject} ${fMRIName} ${hp}
 then
 	fixlist="HandNoise.txt"
-	#TSC: if regname (which applies to the surface) isn't NONE, assume the hand classification was previously already applied to the volume data
-	if [[ "${RegName}" == "NONE" ]]
+	#TSC: if regname (which applies to the surface) isn't empty, assume the hand classification was previously already applied to the volume data
+	if [[ "${RegName}" == "" ]]
 	then
 		DoVol=1
 	fi
@@ -731,7 +743,7 @@ $FSLDIR/bin/imrm ${fmrihp}.ica/filtered_func_data
 rm -f ${fmrihp}.ica/Atlas.dtseries.nii
 
 # Optional deletion of highpass intermediates
-if [ "${DeleteIntermediates}" == "1" ] ; then
+if ((DeleteIntermediates)) ; then
 	if (( hp > 0 )); then  # fix_3_clean only writes out the hp-filtered time series if hp > 0
 		$FSLDIR/bin/imrm ${fmri}_hp${hp}  # Explicitly use _hp${hp} here (rather than $hpStr as a safeguard against accidental deletion of the non-hp-filtered timeseries)
 		rm -f ${fmrihp}.ica/Atlas_hp_preclean.dtseries.nii

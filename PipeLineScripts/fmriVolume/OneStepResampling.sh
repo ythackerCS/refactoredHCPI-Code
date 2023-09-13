@@ -70,6 +70,8 @@ opts_AddMandatory '--ojacobian' 'JacobianOut' 'image' "output transformed + dist
 #Optional Args 
 opts_AddOptional '--fmrirefpath' 'fMRIReferencePath' 'path' "path to an external BOLD reference or NONE (default)" "NONE"
 
+opts_AddOptional '--wb-resample' 'useWbResample' 'True OR False' "Use wb command to do volume resampeling instead of applywarp" "0"
+
 opts_AddOptional '--fmrirefreg' 'fMRIReferenceReg' 'registration method' "whether to do 'linear', 'nonlinear' or no ('NONE', default) registration to external BOLD reference image" "NONE"
 
 opts_ParseArguments "$@"
@@ -169,8 +171,6 @@ log_Check_Env_Var FSLDIR
 # fMRIReferenceReg=`getopt1 "--fmrirefreg" $@`  # "${20}"
 
 #hidden: toggle for unreleased new resampling command, default off
-useWbResample=`getopt1 "--wb-resample" $@`
-useWbResample="${useWbResample:-0}"
 #with wb_command -volume-resample, the warpfields and per-frame motion affines do not need to be combined in advance,
 #and the timeseries can be resampled without splitting into one-frame files, resulting in much less file IO
 
@@ -185,10 +185,6 @@ case "$(echo "$useWbResample" | tr '[:upper:]' '[:lower:]')" in
         log_Err_Abort "unrecognized boolean '$useWbResample', please use yes/no, true/false, or 1/0"
         ;;
 esac
-
-# defaults #### WE DONT NEED THIS NOW RIGHT??????????????????????????????????//
-# fMRIReferencePath=${fMRIReferencePath:-NONE}
-# fMRIReferenceReg=${fMRIReferenceReg:-NONE}
 
 # --- Report arguments
 
